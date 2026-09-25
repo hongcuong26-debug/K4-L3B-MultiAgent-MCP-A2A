@@ -1,5 +1,30 @@
 # K4 L3B — Multi-Agent MCP + A2A
 
+## Bản triển khai Day 09
+
+Workflow đã có Entity/Customer, Order/Item/Product, Payment/Refund, Shipment,
+Policy/Conflict và Verifier; xem [ARCHITECTURE.md](ARCHITECTURE.md).
+Public schemas được giữ nguyên, kiểm tra bằng `contracts/schema-lock.json`.
+
+Nếu input đã giải nén trong `l3b-inputs-v1/`, chạy trên PowerShell:
+
+```powershell
+.venv/Scripts/python.exe -m student_agent.cli --input-root l3b-inputs-v1 validate-inputs
+.venv/Scripts/python.exe -m student_agent.cli mcp-tools
+.venv/Scripts/python.exe -m student_agent.cli --input-root l3b-inputs-v1 run
+.venv/Scripts/python.exe -m student_agent.cli --input-root l3b-inputs-v1 validate
+.venv/Scripts/python.exe -m student_agent.cli --input-root l3b-inputs-v1 package
+.venv/Scripts/python.exe -m student_agent.cli --input-root l3b-inputs-v1 submit
+.venv/Scripts/python.exe -m student_agent.cli status RECEIPT
+```
+
+Điền key thật vào `.env`, giữ `.env.example` là placeholder. Khi SDK transport không
+kết nối ổn định, thêm `MCP_TRANSPORT=sync` vào `.env` để dùng kết nối HTTP tái sử dụng.
+Mở run L3B trên workspace trước khi chạy. Chỉ dùng `run --resume` khi vẫn cùng team và
+cùng competition run; không reset run giữa lúc lấy evidence và nộp ZIP.
+`submit` kiểm tra và đóng gói lại trước upload, ghi receipt cạnh ZIP, không tự nộp lại
+khi lỗi mạng. Artifact bắt buộc tên `manifest.json` và `trace.jsonl` tại gốc ZIP.
+
 ## Mục tiêu
 
 Xây dựng hệ thống multi-agent điều tra khiếu nại thương mại điện tử.
@@ -124,8 +149,7 @@ src/student_agent/workflow.py
 Hàm chính:
 
 ```python
-async def solve_case(case, gateway, trace) -> dict:
-    ...
+async def solve_case(case, gateway, trace) -> dict: ...
 ```
 
 Có thể tổ chức các vai trò:

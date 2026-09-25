@@ -1,0 +1,7 @@
+{
+  "l3a-output-v2.schema.json": "8a368a7a19022c02119f43cb5b4a823ac9a84f4fa6332e48acf30f0eebf11cd9",
+  "l3b-output-v2.schema.json": "91ed025c4a921b2d228d127507e8f710f7f3c7c06ed0398ed6b21c2f201a6e3f",
+  "mcp-evidence-response-v1.schema.json": "240d7eda9122f6339060d65941d82e3e5ed832f94e24d24eb30bf5df7a9b910c",
+  "submission-manifest-v2.schema.json": "e40a46d14965f98cd76987dbddc81b0322af810bc73b0da2726325f7799ae40e",
+  "trace-event-v1.schema.json": "07ae3952b88efe41cf6c6f292d55c69db565591bc71a6a2c243dff3c1ed9010f"
+}

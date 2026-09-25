@@ -65,6 +65,7 @@ def validate_artifacts(
         raise ValueError("traces/trace.jsonl is missing or not UTF-8") from exc
     normalized_lines: list[str] = []
     seen_events: set[str] = set()
+    events_by_case: dict[str, list[dict[str, Any]]] = {case_id: [] for case_id in expected}
     for number, line in enumerate(trace_lines, 1):
         if not line.strip():
             continue
@@ -78,7 +79,44 @@ def validate_artifacts(
         if event["event_id"] in seen_events:
             raise ValueError(f"traces/trace.jsonl:{number}: duplicate event_id")
         seen_events.add(event["event_id"])
+        events_by_case[event["case_id"]].append(event)
         normalized_lines.append(json.dumps(event, ensure_ascii=False, separators=(",", ":")))
+
+    required_events = {
+        "case_received",
+        "task_assigned",
+        "handoff",
+        "verification_completed",
+        "case_finalized",
+    }
+    owners: dict[str, str] = {}
+    for case_id, events in events_by_case.items():
+        kinds = [event["event_type"] for event in events]
+        if not required_events <= set(kinds):
+            raise ValueError(f"{case_id}: incomplete observable trace lifecycle")
+        if (
+            kinds[0] != "case_received"
+            or kinds[-1] != "case_finalized"
+            or kinds.count("case_received") != 1
+            or kinds.count("case_finalized") != 1
+        ):
+            raise ValueError(f"{case_id}: invalid receive/finalize ordering")
+        consumed = {
+            ref
+            for event in events
+            if event["event_type"] == "tool_result_consumed"
+            for ref in event.get("evidence_refs", [])
+        }
+        output_refs = set(outputs[case_id]["evidence_refs"])
+        if not output_refs or not output_refs <= consumed:
+            raise ValueError(f"{case_id}: missing evidence-to-trace linkage")
+        for ref in consumed:
+            if ref in owners and owners[ref] != case_id:
+                raise ValueError(f"{case_id}: cross-case evidence ref in trace")
+            owners[ref] = case_id
+        for claim in outputs[case_id].get("claim_assessments", []):
+            if not set(claim["evidence_refs"]) <= output_refs:
+                raise ValueError(f"{case_id}: claim evidence is outside output evidence")
 
     serialized = [json.dumps(value, ensure_ascii=False) for value in outputs.values()]
     if SECRET_PATTERN.search("\n".join([*serialized, *normalized_lines])):
@@ -86,11 +124,11 @@ def validate_artifacts(
     return outputs, normalized_lines
 
 
-def package_submission(root: Path, destination: Path) -> Path:
+def package_submission(root: Path, destination: Path, input_root: Path | None = None) -> Path:
     from .cases import load_case_set
 
     root = root.resolve()
-    case_set = load_case_set(root)
+    case_set = load_case_set(input_root or root)
     contracts = Contracts(root / "contracts" / "schemas")
     outputs, trace_lines = validate_artifacts(root, case_set, contracts)
     manifest = build_manifest(case_set)

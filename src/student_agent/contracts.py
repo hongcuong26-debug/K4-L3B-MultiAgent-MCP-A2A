@@ -21,6 +21,7 @@ class Contracts:
         registry = Registry()
         for path in sorted(self.root.glob("*.schema.json")):
             schema = json.loads(path.read_text(encoding="utf-8"))
+            Draft202012Validator.check_schema(schema)
             schemas[path.name] = schema
             resource = Resource.from_contents(schema)
             registry = registry.with_resource(schema["$id"], resource)
@@ -34,7 +35,10 @@ class Contracts:
         validator = Draft202012Validator(
             schema, registry=self._registry, format_checker=FormatChecker()
         )
-        errors = sorted(validator.iter_errors(value), key=lambda error: list(error.absolute_path))
+        errors = sorted(
+            validator.iter_errors(value),
+            key=lambda error: tuple(str(part) for part in error.absolute_path),
+        )
         if errors:
             error = errors[0]
             location = ".".join(str(part) for part in error.absolute_path) or "$"
